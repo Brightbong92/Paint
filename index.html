@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">   
+    <title>Paint</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script src='./fabric.js'></script>
+</head>
+<body>
+    <button id="rect">Draw Rectangle</button>
+    <button id="circle">Draw Circle</button>
+    <button id="triangle">Draw Triangle</button>
+    <button id="freeDraw">Draw Free</button>
+
+
+    <canvas id="canvas" width="1800" height="880"></canvas>
+</body>
+
+
+<script>
+    let canvas = new fabric.Canvas("canvas");
+    let rect, ellipse, triangle, origX, origY;
+    let isRect = false, isCircle = false, isTriangle = false;
+    let isDrawing;
+
+    $(()=> {
+        $('#rect').click(()=> {
+            isRect = true;
+            isCircle = false;
+            isTriangle = false;
+            canvas.isDrawingMode = 0;
+        });
+
+        $('#circle').click(()=> {
+            isRect = false;
+            isCircle = true;
+            isTriangle = false;
+            canvas.isDrawingMode = 0;
+        });
+
+        $('#triangle').click(()=> {
+            isRect = false;
+            isCircle = false;
+            isTriangle = true;
+            canvas.isDrawingMode = 0;
+        });
+
+        $('#freeDraw').click(()=> {
+            isRect = false;
+            isCircle = false;
+            isTriangle = false;
+            canvas.isDrawingMode = 1;
+        });
+    });
+
+    canvas.on('mouse:down', option => {
+        console.log('Event mouse: down');
+
+        var pointer = canvas.getPointer(option.e);
+        origX = pointer.x;
+        origY = pointer.y;
+
+        isDrawing = true;
+
+        if(isDrawing) {
+            if(isRect) {
+            rect = new fabric.Rect({
+                left: origX,
+                top: origY,
+                width: pointer.x-origX,
+                height: pointer.y-origY,
+                fill: '',
+                stroke: 'red',
+                type: 'rect',
+                strokeWidth: 5,
+            });
+            canvas.add(rect);
+            }else if(isCircle) {
+                ellipse = new fabric.Ellipse({
+                    left: origX,
+                    top: origY,
+                    width: pointer.x - origX,
+                    height: pointer.y - origY,
+                    fill: '',
+                    stroke: 'blue',
+                    type: 'ellipse',
+                    strokeWidth: 2,
+                });
+                canvas.add(ellipse);
+            }else if(isTriangle) {
+                triangle = new fabric.Triangle({
+                    left: origX,
+                    top: origY,
+                    width: pointer.x-origX,
+                    height: pointer.y-origY,
+                    fill: '',
+                    stroke: 'green',
+                    type: 'triangle',
+                    strokeWidth: 5,
+                });
+                canvas.add(triangle);
+            }
+        }
+
+    });
+
+    canvas.on('mouse:move', option => {
+
+    if(isDrawing) {
+        var pointer = canvas.getPointer(option.e);
+        if(isRect) {
+       
+        if(origX>pointer.x) {
+            rect.set({ left: Math.abs(pointer.x)});
+            //console.log('rect left: '+rect.left);
+        }
+
+        if(origY>pointer.y) {
+            rect.set({ top: Math.abs(pointer.y)});
+            //console.log('rect top:'+rect.top);
+        }
+        
+        rect.set({ width: Math.abs(origX - pointer.x) });
+        rect.set({ height: Math.abs(origY - pointer.y) });
+        
+        console.log('width: ' + rect.width);
+        console.log('height: ' + rect.height);
+        }else if(isCircle) {
+            var rx = Math.abs(origX - pointer.x) / 2;
+            var ry = Math.abs(origY - pointer.y) / 2;
+
+            if(rx > ellipse.strokeWidth) {
+                rx -= ellipse.strokeWidth / 2;
+            }
+
+            if(ry > ellipse.strokeWidth) {
+                ry -= ellipse.strokeWidth / 2;
+            }
+
+            ellipse.set({ rx: rx, ry: ry});
+
+	        if(origX > pointer.x){
+	            ellipse.set({originX: 'right' });
+	        } else {
+	            ellipse.set({originX: 'left' });
+	        }
+	        if(origY > pointer.y){
+	            ellipse.set({originY: 'bottom'  });
+	        } else {
+	            ellipse.set({originY: 'top'  });
+	        }
+        }else if(isTriangle) {
+            if(origX>pointer.x) {
+               triangle.set({ left: Math.abs(pointer.x)});
+            }
+
+            if(origY>pointer.y) {
+                triangle.set({ top: Math.abs(pointer.y)});
+            }
+            
+            triangle.set({ width: Math.abs(origX - pointer.x) });
+            triangle.set({ height: Math.abs(origY - pointer.y) });
+        }
+    }
+        
+
+
+        canvas.renderAll();
+    });
+
+    canvas.on('mouse:up', option => {
+        console.log('Event mouse: up');
+
+        isDrawing = false;
+
+        if(isRect) {
+            isRect = false;
+        }
+
+        if(isCircle) {
+            isCircle = false;
+        }
+
+        if(isTriangle) {
+            isTriangle = false;
+        }
+
+    });
+// const addText = ()=> {
+//     canvas.isDrawingMode = 1;
+//     canvas.freeDrawingBrush.width = 20;
+// }
+
+// const addCircle = () => {
+//     index = index + 1;
+//     Circle = new fabric.Circle({
+//         id: index,
+//         left:50,
+//         top:50,
+//         radius:5,
+//         fill: 'red'
+//     })
+//     canvas.add(Circle)
+// }
+
+// const addTriangle = () => {
+//     Circle.set({
+//         opaccity:0.4,
+//         fill: 'red'
+//     })
+//     console.log(canvas.getObjects());
+</script>
+
+</html>
