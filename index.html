@@ -5,22 +5,161 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">   
     <title>Paint</title>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <!--
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    -->
     <script src='./fabric.js'></script>
+    <script src='./socket.io/socket.io.js'></script>
+
+
+<style>
+    #jb-container {
+    width: 1600px;
+    margin: 0px auto;
+    padding: 20px;
+    border: 1px solid #bcbcbc;
+    }
+    #jb-header {
+    padding: 20px;
+    margin-bottom: 20px;
+    border: 1px solid #bcbcbc;
+    }
+    #jb-sidebar-left {
+    width: 160px;
+    padding: 20px;
+    margin-right: 20px;
+    margin-bottom: 20px;
+    float: left;
+    border: 1px solid #bcbcbc;
+    }
+    #jb-content {
+    width: 450px;
+    padding: 20px;
+    margin-bottom: 20px;
+    float: left;
+    border: 1px solid #bcbcbc;
+    }
+    #jb-sidebar-right {
+    width: 400px;
+    height: auto;
+    padding: 20px;
+    margin-bottom: 20px;
+    float: right;
+    border: 1px solid #bcbcbc;
+    }
+    #jb-footer {
+    clear: both;
+    padding: 20px;
+    border: 1px solid #bcbcbc;
+    }
+    .figure-tool {
+        display:block;
+    }
+    .chat-area {
+        width: 400px;
+        height: auto;
+        /*overflow-y: hidden;*/
+        overflow-y: auto;
+        resize: none;
+    }
+    .chat-input-area {
+        width: 330px;
+        height:20px;
+    }
+</style>
 </head>
 <body>
-    <button id="rect">Draw Rectangle</button>
-    <button id="circle">Draw Circle</button>
-    <button id="triangle">Draw Triangle</button>
-    <button id="freeDraw">Draw Free</button>
 
+    <div id="jb-container">
+        <div id="jb-header">
+            <h1>3-Column Layout</h1>
+        </div>
+        <div id="jb-sidebar-left">
+            <h2>Tools</h2>
+            <div>
+                <button id="rect" class='figure-tool'>사각형</button>
+                <button id="circle" class='figure-tool'>타원</button>
+                <button id="triangle" class='figure-tool'>삼각형</button>
+                <button id="freeDraw" class='figure-tool'>그리기</button>
+            </div>
+        </div>
 
-    <canvas id="canvas" width="1800" height="880"></canvas>
+        <div id="jb-content">
+            <canvas id="canvas" width="450" height="550"></canvas>
+        </div>
+        <div id="jb-sidebar-right">
+            <h2>Sidebar</h2>
+               
+            <textarea id="chat-area" class="chat-area" cols="30" rows="20" readonly></textarea>
+            
+            <!--
+            <div id='chat-area' class="chat-area"></div>
+            -->
+            <div>
+                <input type="text" id="chat-input-area" class="chat-input-area" />
+                <button type="button" onClick="send()">전송</button>
+            </div>     
+        </div>
+
+        <div id="jb-footer">
+            <p>Copyright</p>
+        </div>
+    </div>
+
 </body>
 
 
 <script>
+    var socket = io()
+
+    var userName;
+
+    socket.on('connect', ()=> {
+        
+        var name = prompt('이름을 지정', '');
+
+        if(!name) {
+            name = '익명';
+        }
+
+        userName = name;
+        socket.emit('newUser', name);
+
+    });
+
+    const send = ()=> {//메세지 전송
+        var msg = document.getElementById('chat-input-area').value;
+        socket.emit('message', {type: 'message', message: msg});
+
+        $('#chat-area').append(userName + `: ` + msg + `\n`);
+        $('#chat-input-area').val('');
+
+        var el = document.getElementById('chat-area');
+        if (el.scrollHeight > 0) el.scrollTop = el.scrollHeight;
+    };
+
+    socket.on('chat', data => {//chat 받을경우
+        console.log(`${data.name}: ${data.message}`);
+        
+        $('#chat-area').append(`${data.name}: ${data.message}` + '\n')
+
+    });
+
+    socket.on('recvCanvas', data => {// canvas 받을경우
+        //console.log(data.message);
+        canvas.loadFromJSON(data.message);
+    })
+
+    const sendCanvas = canvasData => {
+        var d = JSON.stringify(canvasData);
+
+        socket.emit('sendCanvas', {type: 'message', message: d});
+
+    }
+
+
     let canvas = new fabric.Canvas("canvas");
-    let rect, ellipse, triangle, origX, origY;
+    let rect, ellipse, triangle, polygon, origX, origY;
     let isRect = false, isCircle = false, isTriangle = false;
     let isDrawing;
 
@@ -65,17 +204,17 @@
 
         if(isDrawing) {
             if(isRect) {
-            rect = new fabric.Rect({
-                left: origX,
-                top: origY,
-                width: pointer.x-origX,
-                height: pointer.y-origY,
-                fill: '',
-                stroke: 'red',
-                type: 'rect',
-                strokeWidth: 5,
-            });
-            canvas.add(rect);
+                rect = new fabric.Rect({
+                    left: origX,
+                    top: origY,
+                    width: pointer.x-origX,
+                    height: pointer.y-origY,
+                    fill: '',
+                    stroke: 'red',
+                    type: 'rect',
+                    strokeWidth: 5,
+                });
+               canvas.add(rect);
             }else if(isCircle) {
                 ellipse = new fabric.Ellipse({
                     left: origX,
@@ -120,12 +259,12 @@
             rect.set({ top: Math.abs(pointer.y)});
             //console.log('rect top:'+rect.top);
         }
+            
+            rect.set({ width: Math.abs(origX - pointer.x) });
+            rect.set({ height: Math.abs(origY - pointer.y) });
         
-        rect.set({ width: Math.abs(origX - pointer.x) });
-        rect.set({ height: Math.abs(origY - pointer.y) });
-        
-        console.log('width: ' + rect.width);
-        console.log('height: ' + rect.height);
+            //console.log('width: ' + rect.width);
+            //console.log('height: ' + rect.height);
         }else if(isCircle) {
             var rx = Math.abs(origX - pointer.x) / 2;
             var ry = Math.abs(origY - pointer.y) / 2;
@@ -163,9 +302,6 @@
             triangle.set({ height: Math.abs(origY - pointer.y) });
         }
     }
-        
-
-
         canvas.renderAll();
     });
 
@@ -176,14 +312,21 @@
 
         if(isRect) {
             isRect = false;
+            sendCanvas(rect);
         }
 
         if(isCircle) {
             isCircle = false;
+            sendCanvas(ellipse);
         }
 
         if(isTriangle) {
             isTriangle = false;
+            sendCanvas(triangle);
+        }
+
+        if(canvas.isDrawingMode === 1) {
+            sendCanvas(canvas);
         }
 
     });
